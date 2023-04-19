@@ -3,7 +3,7 @@ import os
 
 def reconstruct_all_video(videos, output_dir, suffix, outputs_list):
     print(f"Reconstructing {len(videos)} output videos")
-    for i, video in enumerate(videos):
+    for video in videos:
         reconstruct_video(video, output_dir, suffix, outputs_list)
 
 
@@ -34,7 +34,7 @@ def reconstruct_video(video, output_dir, suffix, outputs_list):
 
 def reconstruct_all_color(videos, output_dir, suffix):
     print(f"Reconstructing {len(videos)} original color videos")
-    for i, video in enumerate(videos):
+    for video in videos:
         out_path = os.path.join(output_dir, os.path.basename(video))
         if not os.path.exists(f"{out_path}_color{suffix}.mp4"):
             # set up output timestamp file
@@ -52,26 +52,24 @@ def reconstruct_all_color(videos, output_dir, suffix):
 
 
 def write_output_timestamp_file(input, output, output_dir, output_suffix):
-    ts_in = open(os.path.join(input, "timestampfile.txt"), "rt")
-    ts_out = open(os.path.join(output, "timestampfile.txt"), "wt")
-    for line in ts_in:
-        ts_out.write(
-            line.replace("file ", "file " + output_dir + "/").replace(
-                "out", output_suffix
+    with open(os.path.join(input, "timestampfile.txt"), "rt") as ts_in:
+        ts_out = open(os.path.join(output, "timestampfile.txt"), "wt")
+        for line in ts_in:
+            ts_out.write(
+                line.replace("file ", f"file {output_dir}/").replace(
+                    "out", output_suffix
+                )
             )
-        )
-    ts_in.close()
     ts_out.close()
 
 
 def write_input_timestamp_file(input):
-    ts_in = open(os.path.join(input, "timestampfile.txt"), "rt")
-    ts_out = open(os.path.join(input, "timestampfile_color.txt"), "wt")
-    for line in ts_in:
-        ts_out.write(
-            line.replace("file ", "file " + os.path.basename(input) + "/").replace(
-                "out", "img"
+    with open(os.path.join(input, "timestampfile.txt"), "rt") as ts_in:
+        ts_out = open(os.path.join(input, "timestampfile_color.txt"), "wt")
+        for line in ts_in:
+            ts_out.write(
+                line.replace(
+                    "file ", f"file {os.path.basename(input)}/"
+                ).replace("out", "img")
             )
-        )
-    ts_in.close()
     ts_out.close()

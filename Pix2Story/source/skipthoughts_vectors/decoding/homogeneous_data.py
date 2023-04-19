@@ -26,8 +26,8 @@ class HomogeneousData():
             self.len_unique = [ll for ll in self.len_unique if ll <= self.maxlen]
 
         # indices of unique lengths
-        self.len_indices = dict()
-        self.len_counts = dict()
+        self.len_indices = {}
+        self.len_counts = {}
         for ll in self.len_unique:
             self.len_indices[ll] = numpy.where(self.lengths == ll)[0]
             self.len_counts[ll] = len(self.len_indices[ll])
@@ -38,7 +38,7 @@ class HomogeneousData():
     def reset(self):
         self.len_curr_counts = copy.copy(self.len_counts)
         self.len_unique = numpy.random.permutation(self.len_unique)
-        self.len_indices_pos = dict()
+        self.len_indices_pos = {}
         for ll in self.len_unique:
             self.len_indices_pos[ll] = 0
             self.len_indices[ll] = numpy.random.permutation(self.len_indices[ll])
@@ -98,7 +98,7 @@ def prepare_data(caps, features, worddict, model, maxlen=None, n_words=10000):
         feat_list = new_feat_list
         seqs = new_seqs
 
-        if len(lengths) < 1:
+        if not lengths:
             return None, None, None
 
     # Compute skip-thought vectors for this mini-batch

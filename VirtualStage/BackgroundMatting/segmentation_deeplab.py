@@ -150,10 +150,10 @@ if not os.path.exists(model_dir):
 
 download_path = os.path.join(model_dir, _TARBALL_NAME)
 if not os.path.exists(download_path):
-  print('downloading model to %s, this might take a while...' % download_path)
-  urllib.request.urlretrieve(_DOWNLOAD_URL_PREFIX + _MODEL_URLS[MODEL_NAME],
-			     download_path)
-  print('download completed! loading DeepLab model...')
+	print(f'downloading model to {download_path}, this might take a while...')
+	urllib.request.urlretrieve(_DOWNLOAD_URL_PREFIX + _MODEL_URLS[MODEL_NAME],
+	download_path)
+	print('download completed! loading DeepLab model...')
 
 MODEL = DeepLabModel(download_path)
 print('model loaded successfully!')
@@ -161,12 +161,13 @@ print('model loaded successfully!')
 #######################################################################################
 
 
-list_im=glob.glob(dir_name + '/*_img.png'); list_im.sort()
+list_im = glob.glob(f'{dir_name}/*_img.png')
+list_im.sort()
 
 
-for i in range(0,len(list_im)):
+for item in list_im:
 
-	image = Image.open(list_im[i])
+	image = Image.open(item)
 
 	res_im,seg=MODEL.run(image)
 
@@ -175,7 +176,7 @@ for i in range(0,len(list_im)):
 	mask_sel=(seg==15).astype(np.float32)
 
 
-	name=list_im[i].replace('img','masksDL')
+	name = item.replace('img', 'masksDL')
 	cv2.imwrite(name,(255*mask_sel).astype(np.uint8))
 
 str_msg='\nDone: ' + dir_name

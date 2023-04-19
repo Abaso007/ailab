@@ -45,23 +45,24 @@ def trainer(text,training_settings):
     save_freq =  training_settings['save_freq']
     reload_ =  training_settings['reload_']
 
-    model_options = {}
-    model_options['dim_word'] = dim_word
-    model_options['dim'] = dim
-    model_options['encoder'] = encoder
-    model_options['decoder'] = decoder
-    model_options['max_epochs'] = max_epochs
-    model_options['dispFreq'] = disp_freq
-    model_options['decay_c'] = decay_c
-    model_options['grad_clip'] = grad_clip
-    model_options['n_words'] = n_words
-    model_options['maxlen_w'] = maxlen_w
-    model_options['optimizer'] = optimizer
-    model_options['batch_size'] = batch_size
-    model_options['saveto'] = saveto
-    model_options['dictionary'] = dictionary
-    model_options['saveFreq'] = save_freq
-    model_options['reload_'] = reload_
+    model_options = {
+        'dim_word': dim_word,
+        'dim': dim,
+        'encoder': encoder,
+        'decoder': decoder,
+        'max_epochs': max_epochs,
+        'dispFreq': disp_freq,
+        'decay_c': decay_c,
+        'grad_clip': grad_clip,
+        'n_words': n_words,
+        'maxlen_w': maxlen_w,
+        'optimizer': optimizer,
+        'batch_size': batch_size,
+        'saveto': saveto,
+        'dictionary': dictionary,
+        'saveFreq': save_freq,
+        'reload_': reload_,
+    }
     print (model_options)
 
     # reload options
@@ -71,10 +72,7 @@ def trainer(text,training_settings):
     print ('Loading dictionary...')
     worddict = load_dictionary(dictionary)
 
-    # Inverse dictionary
-    word_idict = dict()
-    for kk, vv in worddict.items():
-        word_idict[vv] = kk
+    word_idict = {vv: kk for kk, vv in worddict.items()}
     word_idict[0] = '<eos>'
     word_idict[1] = 'UNK'
 
@@ -115,11 +113,12 @@ def trainer(text,training_settings):
         g2 = 0.
         for g in grads:
             g2 += (g**2).sum()
-        new_grads = []
-        for g in grads:
-            new_grads.append(tensor.switch(g2 > (grad_clip**2),
-                                            g / tensor.sqrt(g2) * grad_clip,
-                                            g))
+        new_grads = [
+            tensor.switch(
+                g2 > (grad_clip**2), g / tensor.sqrt(g2) * grad_clip, g
+            )
+            for g in grads
+        ]
         grads = new_grads
 
     lr = tensor.scalar(name='lr')

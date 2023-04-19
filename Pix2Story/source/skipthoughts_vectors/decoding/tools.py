@@ -26,15 +26,13 @@ def load_model():
 
     # Create inverted dictionary
     print ('Creating inverted dictionary...')
-    word_idict = dict()
-    for kk, vv in worddict.items():
-        word_idict[vv] = kk
+    word_idict = {vv: kk for kk, vv in worddict.items()}
     word_idict[0] = '<eos>'
     word_idict[1] = 'UNK'
 
     # Load model options
     print ('Loading model options...')
-    with open('%s.pkl'%config.paths['skvmodels'], 'rb') as f:
+    with open(f"{config.paths['skvmodels']}.pkl", 'rb') as f:
         options = pkl.load(f)
 
     # Load parameters
@@ -47,16 +45,15 @@ def load_model():
     trng = RandomStreams(1234)
     f_init, f_next = build_sampler(tparams, options, trng)
 
-    # Pack everything up
-    dec = dict()
-    dec['options'] = options
-    dec['trng'] = trng
-    dec['worddict'] = worddict
-    dec['word_idict'] = word_idict
-    dec['tparams'] = tparams
-    dec['f_init'] = f_init
-    dec['f_next'] = f_next
-    return dec
+    return {
+        'options': options,
+        'trng': trng,
+        'worddict': worddict,
+        'word_idict': word_idict,
+        'tparams': tparams,
+        'f_init': f_init,
+        'f_next': f_next,
+    }
 
 def run_sampler(dec, c, beam_width=1, use_unk=False):
     """
@@ -67,9 +64,6 @@ def run_sampler(dec, c, beam_width=1, use_unk=False):
                'trng' : dec['trng'], 'k' : beam_width, 'maxlen' : 1000, 'argmax' : False,
                 'use_unk' : use_unk}
     sample, score = GenSample(**kwargs).gen_sample()
-    text = []
-    for c in sample:
-        text.append(' '.join([dec['word_idict'][w] for w in c[:-1]]))
-    return text
+    return [' '.join([dec['word_idict'][w] for w in c[:-1]]) for c in sample]
 
 

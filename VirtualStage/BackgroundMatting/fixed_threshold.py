@@ -9,8 +9,8 @@ def fixed_split(videos, thresholds, mask_suffix, overlap=0):
             continue
 
         try:
-            os.makedirs(video + "_up")
-            os.makedirs(video + "_dw")
+            os.makedirs(f"{video}_up")
+            os.makedirs(f"{video}_dw")
         except FileExistsError:
             continue
 
@@ -20,53 +20,36 @@ def fixed_split(videos, thresholds, mask_suffix, overlap=0):
 
         # crop color images
         code = os.system(
-            f"ffmpeg -i {os.path.join(video, '%04d_img.png')} "
-            f'-filter:v "crop={iup_region}" '
-            f"{os.path.join(video+'_up', '%04d_img.png')}"
-            " > split_logs.txt 2>&1"
+            f"""ffmpeg -i {os.path.join(video, '%04d_img.png')} -filter:v "crop={iup_region}" {os.path.join(f'{video}_up', '%04d_img.png')} > split_logs.txt 2>&1"""
         )
         if code != 0:
             exit(code)
         code = os.system(
-            f"ffmpeg -i {os.path.join(video, '%04d_img.png')} "
-            f'-filter:v "crop={idw_region}" '
-            f"{os.path.join(video+'_dw', '%04d_img.png')}"
-            " > split_logs.txt 2>&1"
+            f"""ffmpeg -i {os.path.join(video, '%04d_img.png')} -filter:v "crop={idw_region}" {os.path.join(f'{video}_dw', '%04d_img.png')} > split_logs.txt 2>&1"""
         )
         if code != 0:
             exit(code)
 
         # crop mask images
         code = os.system(
-            f"ffmpeg -i {os.path.join(video, '%04d')}{mask_suffix}.png "
-            f'-filter:v "crop={iup_region}" '
-            f"{os.path.join(video+'_up', '%04d')}{mask_suffix}.png"
-            " > split_logs.txt 2>&1"
+            f"""ffmpeg -i {os.path.join(video, '%04d')}{mask_suffix}.png -filter:v "crop={iup_region}" {os.path.join(f'{video}_up', '%04d')}{mask_suffix}.png > split_logs.txt 2>&1"""
         )
         if code != 0:
             exit(code)
         code = os.system(
-            f"ffmpeg -i {os.path.join(video, '%04d')}{mask_suffix}.png "
-            f'-filter:v "crop={idw_region}" '
-            f"{os.path.join(video+'_dw', '%04d')}{mask_suffix}.png"
-            " > split_logs.txt 2>&1"
+            f"""ffmpeg -i {os.path.join(video, '%04d')}{mask_suffix}.png -filter:v "crop={idw_region}" {os.path.join(f'{video}_dw', '%04d')}{mask_suffix}.png > split_logs.txt 2>&1"""
         )
         if code != 0:
             exit(code)
 
         # crop background image
         code = os.system(
-            f"ffmpeg -y -i {video+'.png'} "
-            f"-filter:v \"crop={iup_region}\" {video+'_up.png'}"
-            " > split_logs.txt 2>&1"
+            f'ffmpeg -y -i {video}.png -filter:v \"crop={iup_region}\" {video}_up.png > split_logs.txt 2>&1'
         )
         if code != 0:
             exit(code)
         code = os.system(
-            f"ffmpeg -y -i {video+'.png'} "
-            f'-filter:v "crop={idw_region}" '
-            f"{video+'_dw.png'}"
-            " > split_logs.txt 2>&1"
+            f'ffmpeg -y -i {video}.png -filter:v "crop={idw_region}" {video}_dw.png > split_logs.txt 2>&1'
         )
         if code != 0:
             exit(code)
@@ -88,8 +71,8 @@ def fixed_merge(videos, factors, output_dir, suffix, outputs_list, overlap=0):
             except FileExistsError:
                 continue
 
-            outpup = (out_path + "_up" + suffix).replace("\\", "/")
-            outpdw = (out_path + "_dw" + suffix).replace("\\", "/")
+            outpup = f"{out_path}_up{suffix}".replace("\\", "/")
+            outpdw = f"{out_path}_dw{suffix}".replace("\\", "/")
 
             for o in outputs_list:
                 code = os.system(

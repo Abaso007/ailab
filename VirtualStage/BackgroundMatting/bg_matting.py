@@ -14,18 +14,13 @@ args = get_parser().parse_args()
 
 video_start = int(args.start)
 video_duration = args.duration
-EXT = "." + args.input_extension
-if args.kinect_mask:
-    EXT = ".mkv"
+EXT = ".mkv" if args.kinect_mask else f".{args.input_extension}"
 path = args.input
 original_videos = [
     os.path.join(path, f[:-4]) for f in os.listdir(path) if f.endswith(EXT)
 ]
-mask_suffix = "_masksDL"
 output_suffix = f"_{args.name}"
-if args.kinect_mask:
-    mask_suffix = "_masksAK"
-
+mask_suffix = "_masksAK" if args.kinect_mask else "_masksDL"
 outputs = args.output_types.split(",")
 
 op_default = "erode,3,10;dilate,5,5;blur,31,0"
@@ -46,9 +41,7 @@ for i, video in enumerate(original_videos):
     if i >= (len(thresholds)) or not thresholds[i]:
         videos.append(video)
     else:
-        videos.append(video + "_up")
-        videos.append(video + "_dw")
-
+        videos.extend((f"{video}_up", f"{video}_dw"))
 # Prepare morphological operations that will be applied to masks
 mask_ops = args.mask_ops.split(":")
 defined = len(mask_ops)
@@ -69,7 +62,7 @@ print(f" Doing inference on {len(videos)} input videos")
 from background_matting_image import inference  # noqa: E402
 
 for i, video in enumerate(videos):
-    fixed_back = video + ".png"
+    fixed_back = f"{video}.png"
     out_path = os.path.join(args.output_dir, os.path.basename(video) + output_suffix)
     if not os.path.exists(out_path):
         inference(

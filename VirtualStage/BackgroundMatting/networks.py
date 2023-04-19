@@ -7,7 +7,8 @@ import numpy as np
 
 class ResnetConditionHR(nn.Module):
 	def __init__(self, input_nc, output_nc, ngf=64, nf_part=64,norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks1=7, n_blocks2=3, padding_type='reflect'):
-		assert(n_blocks1 >= 0); assert(n_blocks2 >= 0)
+		assert(n_blocks1 >= 0)
+		assert(n_blocks2 >= 0)
 		super(ResnetConditionHR, self).__init__()
 		self.input_nc = input_nc
 		self.output_nc = output_nc
@@ -18,7 +19,7 @@ class ResnetConditionHR(nn.Module):
 		model_enc1 = [nn.ReflectionPad2d(3),nn.Conv2d(input_nc[0], ngf, kernel_size=7, padding=0,bias=use_bias),norm_layer(ngf),nn.ReLU(True)]
 		model_enc1 += [nn.Conv2d(ngf , ngf * 2, kernel_size=3,stride=2, padding=1, bias=use_bias),norm_layer(ngf * 2),nn.ReLU(True)]
 		model_enc2 = [nn.Conv2d(ngf*2 , ngf * 4, kernel_size=3,stride=2, padding=1, bias=use_bias),norm_layer(ngf * 4),nn.ReLU(True)]
-		
+
 
 		#back encoder output 256xW/4xH/4
 		model_enc_back = [nn.ReflectionPad2d(3),nn.Conv2d(input_nc[1], ngf, kernel_size=7, padding=0,bias=use_bias),norm_layer(ngf),nn.ReLU(True)]
@@ -57,17 +58,29 @@ class ResnetConditionHR(nn.Module):
 
 		#decoder
 		model_res_dec=[nn.Conv2d(ngf * mult +3*nf_part,ngf*mult,kernel_size=1,stride=1,padding=0,bias=False),norm_layer(ngf*mult),nn.ReLU(True)]
-		for i in range(n_blocks1):
+		for _ in range(n_blocks1):
 			model_res_dec += [ResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)]
 
-		model_res_dec_al=[]
-		for i in range(n_blocks2):
-			model_res_dec_al += [ResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)]
-
-		model_res_dec_fg=[]
-		for i in range(n_blocks2):
-			model_res_dec_fg += [ResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)]
-
+		model_res_dec_al = [
+			ResnetBlock(
+				ngf * mult,
+				padding_type=padding_type,
+				norm_layer=norm_layer,
+				use_dropout=use_dropout,
+				use_bias=use_bias,
+			)
+			for _ in range(n_blocks2)
+		]
+		model_res_dec_fg = [
+			ResnetBlock(
+				ngf * mult,
+				padding_type=padding_type,
+				norm_layer=norm_layer,
+				use_dropout=use_dropout,
+				use_bias=use_bias,
+			)
+			for _ in range(n_blocks2)
+		]
 		model_dec_al=[]
 		for i in range(n_downsampling):
 			mult = 2**(n_downsampling - i)
@@ -217,7 +230,7 @@ class ResnetBlock(nn.Module):
 		elif padding_type == 'zero':
 			p = 1
 		else:
-			raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+			raise NotImplementedError(f'padding [{padding_type}] is not implemented')
 
 		conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
 					   norm_layer(dim),
@@ -233,15 +246,14 @@ class ResnetBlock(nn.Module):
 		elif padding_type == 'zero':
 			p = 1
 		else:
-			raise NotImplementedError('padding [%s] is not implemented' % padding_type)
+			raise NotImplementedError(f'padding [{padding_type}] is not implemented')
 		conv_block += [nn.Conv2d(dim, dim, kernel_size=3, padding=p, bias=use_bias),
 					   norm_layer(dim)]
 
 		return nn.Sequential(*conv_block)
 
 	def forward(self, x):
-		out = x + self.conv_block(x)
-		return out
+		return x + self.conv_block(x)
 
 
 ##################################### Discriminators ####################################################
@@ -253,25 +265,23 @@ class MultiscaleDiscriminator(nn.Module):
 		self.num_D = num_D
 		self.n_layers = n_layers
 		self.getIntermFeat = getIntermFeat
-	 
+
 		for i in range(num_D):
 			netD = NLayerDiscriminator(input_nc, ndf, n_layers, norm_layer, use_sigmoid, getIntermFeat)
 			if getIntermFeat:                                
 				for j in range(n_layers+2):
-					setattr(self, 'scale'+str(i)+'_layer'+str(j), getattr(netD, 'model'+str(j)))                                   
+					setattr(self, f'scale{str(i)}_layer{str(j)}', getattr(netD, f'model{str(j)}'))
 			else:
-				setattr(self, 'layer'+str(i), netD.model)
+				setattr(self, f'layer{str(i)}', netD.model)
 
 		self.downsample = nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)
 
 	def singleD_forward(self, model, input):
-		if self.getIntermFeat:
-			result = [input]
-			for i in range(len(model)):
-				result.append(model[i](result[-1]))
-			return result[1:]
-		else:
+		if not self.getIntermFeat:
 			return [model(input)]
+		result = [input]
+		result.extend(model[i](result[-1]) for i in range(len(model)))
+		return result[1:]
 
 	def forward(self, input):        
 		num_D = self.num_D
@@ -279,9 +289,12 @@ class MultiscaleDiscriminator(nn.Module):
 		input_downsampled = input
 		for i in range(num_D):
 			if self.getIntermFeat:
-				model = [getattr(self, 'scale'+str(num_D-1-i)+'_layer'+str(j)) for j in range(self.n_layers+2)]
+				model = [
+					getattr(self, f'scale{str(num_D - 1 - i)}_layer{str(j)}')
+					for j in range(self.n_layers + 2)
+				]
 			else:
-				model = getattr(self, 'layer'+str(num_D-1-i))
+				model = getattr(self, f'layer{str(num_D - 1 - i)}')
 			result.append(self.singleD_forward(model, input_downsampled))
 			if i != (num_D-1):
 				input_downsampled = self.downsample(input_downsampled)
@@ -299,7 +312,7 @@ class NLayerDiscriminator(nn.Module):
 		sequence = [[nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]]
 
 		nf = ndf
-		for n in range(1, n_layers):
+		for _ in range(1, n_layers):
 			nf_prev = nf
 			nf = min(nf * 2, 512)
 			sequence += [[
@@ -322,21 +335,20 @@ class NLayerDiscriminator(nn.Module):
 
 		if getIntermFeat:
 			for n in range(len(sequence)):
-				setattr(self, 'model'+str(n), nn.Sequential(*sequence[n]))
+				setattr(self, f'model{str(n)}', nn.Sequential(*sequence[n]))
 		else:
 			sequence_stream = []
-			for n in range(len(sequence)):
-				sequence_stream += sequence[n]
+			for item in sequence:
+				sequence_stream += item
 			self.model = nn.Sequential(*sequence_stream)
 
 	def forward(self, input):
-		if self.getIntermFeat:
-			res = [input]
-			for n in range(self.n_layers+2):
-				model = getattr(self, 'model'+str(n))
-				res.append(model(res[-1]))
-			return res[1:]
-		else:
-			return self.model(input)        
+		if not self.getIntermFeat:
+			return self.model(input)
+		res = [input]
+		for n in range(self.n_layers+2):
+			model = getattr(self, f'model{str(n)}')
+			res.append(model(res[-1]))
+		return res[1:]        
 
 

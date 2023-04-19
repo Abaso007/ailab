@@ -27,23 +27,20 @@ def prepare_videos(
         if code != 0:
             exit(code)
 
-        print(f"Segmenting frames...")
+        print("Segmenting frames...")
         if kinect_mask:
             code = os.system(
                 f"KinectMaskGenerator.exe {video}{extension} {video} {start} {duration}"
                 f" > segmentation_logs_{i}.txt 2>&1"
             )
-            if code != 0:
-                exit(code)
         else:
             code = os.system(
                 f"python segmentation_deeplab.py -i {video}"
                 f" > segmentation_logs_{i}.txt 2>&1"
             )
-            if code != 0:
-                exit(code)
-
-        print(f"Extracting background...")
+        if code != 0:
+            exit(code)
+        print("Extracting background...")
         code = os.system(
             f"ffmpeg -y -i {video}{extension} -vf scale={width}:{height} "
             f"-map 0:0 -ss 00:00:02.000 -vframes 1 {video}.png -hide_banner"

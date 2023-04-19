@@ -41,7 +41,7 @@ def build_model(tparams, options):
     """
     Computation graph for the model
     """
-    opt_ret = dict()
+    opt_ret = {}
 
     trng = RandomStreams(1234)
 
